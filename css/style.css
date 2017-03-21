@@ -1,0 +1,12 @@
+
+body {
+    margin: 0 auto;
+    max-width: 62.5em;
+}
+.card {
+    margin: 0 auto;
+    width: 20rem;
+}
+.navbar {
+    margin-bottom: 1em;
+}
