@@ -1,94 +1,188 @@
+const model = {
+  init: function(url) {
+    const self = this;
+    const request = new Request(url);
+    fetch(request).then((response) => {
+      if(response.ok) {
+        return response.json();
+      }
+      throw new Error('Model init error');
+    }).then((json) => {
+      self.data = json;
+      controller.modelReady();
+    }).catch((error) => console.log('Error: ' + error ));
+  },
+  getData: function() {
+    return this.data;
+  },
+};
 
-const spyArray = [
-  {
-    'id': 12,
-    'time': '2017-03-02 22:55',
-    'category': 'Wife',
-    'title': 'Title 1',
-    'details': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis sodales enim eget leo condimentum vulputate. Sed lacinia consectetur fermentum. Vestibulum lobortis purus id nisi mattis posuere. Praesent sagittis justo quis nibh ullamcorper, eget elementum lorem consectetur. Pellentesque eu consequat justo, eu sodales eros.',
-    'coordinates': {
-      'lat': 60.2196781,
-      'lng': 24.8079786,
+const htmlTemplate = {
+    card: function(item) {
+        const card = document.createElement('div');
+        card.setAttribute('class', 'card');
+        const img = this.createCardImg(item.thumbnail);
+        const cardBlock = this.createCardBlock(item);
+        const footer = this.createFooter(item);
+        card.appendChild(img);
+        card.appendChild(cardBlock);
+        card.appendChild(footer);
+        return card;
     },
-    'thumbnail': 'http://placekitten.com/320/300',
-    'image': 'http://placekitten.com/768/720',
-    'original': 'http://placekitten.com/2048/1920',
-  },
-  {
-    'id': 15,
-    'time': '2017-03-01 19:23',
-    'category': 'Wife',
-    'title': 'Title 2',
-    'details': 'Donec dignissim tincidunt nisl, non scelerisque massa pharetra ut. Sed vel velit ante. Aenean quis viverra magna. Praesent eget cursus urna. Ut rhoncus interdum dolor non tincidunt. Sed vehicula consequat facilisis. Pellentesque pulvinar sem nisl, ac vestibulum erat rhoncus id. Vestibulum tincidunt sapien eu ipsum tincidunt pulvinar. ',
-    'coordinates': {'lat': 60.3196781, 'lng': 24.9079786},
-    'thumbnail': 'http://placekitten.com/321/300',
-    'image': 'http://placekitten.com/770/720',
-    'original': 'http://placekitten.com/2041/1920',
-  },
-  {
-    'id': 34,
-    'time': '2017-12-04 09:45',
-    'category': 'Girlfriend',
-    'title': 'Title 3',
-    'details': 'Phasellus imperdiet nunc tincidunt molestie vestibulum. Donec dictum suscipit nibh. Sed vel velit ante. Aenean quis viverra magna. Praesent eget cursus urna. Ut rhoncus interdum dolor non tincidunt. Sed vehicula consequat facilisis. Pellentesque pulvinar sem nisl, ac vestibulum erat rhoncus id. ',
-    'coordinates': {'lat': 60.3196781, 'lng': 24.9079786},
-    'thumbnail': 'http://placekitten.com/319/300',
-    'image': 'http://placekitten.com/769/720',
-    'original': 'http://placekitten.com/2039/1920',
-  },
-];
+    createCardImg: function(imgSrc) {
+        const img = document.createElement('img');
+        img.setAttribute('class', 'card-img-top');
+        img.setAttribute('src', imgSrc);
+        return img;
+    },
+    createCardBlock: function(item) {
+        const cardBlock = document.createElement('div');
+        cardBlock.setAttribute('class', 'card-block');
+        const title = document.createElement('h4');
+        title.setAttribute('class', 'card-title');
+        title.innerText = item.title;
+        cardBlock.appendChild(title);
+        const subtitle = document.createElement('h6');
+        subtitle.setAttribute('class', 'card-subtitle mb-2 text-muted');
+        subtitle.innerText = this.formatTimeStamp(item.time);
+        cardBlock.appendChild(subtitle);
+        const details = document.createElement('p');
+        details.setAttribute('class', 'card-text');
+        details.innerText = this.getDetailsThumb(item.details);
+        cardBlock.appendChild(details);
 
+        return cardBlock;
+    },
+    createFooter: function(item) {
+        const footer = document.createElement('div');
+        footer.setAttribute('class', 'card-footer');
+        const button = document.createElement('button');
+        button.setAttribute('class', 'btn btn-primary');
+        button.setAttribute('data-toggle', 'modal');
+        button.setAttribute('data-target', '#myModal');
+        button.textContent = 'View';
+        button.addEventListener('click', (evt)=> {
+            modalView.setData(item);
+        });
+        footer.appendChild(button);
+
+        return footer;
+    },
+    formatTimeStamp: function(time) {
+      return new Date(time).toLocaleString('fi-FI');
+    },
+    getDetailsThumb: function(string) {
+      if(string.length > 100) {
+        return string.substring(0, 100) + '...';
+      } else {
+        return string;
+      }
+    },
+};
 const view = {
   init: function() {
-    this.container =$('#cont');
+    this.container = document.getElementById('cont');
     this.render();
   },
   render: function() {
-    const htmlStr = controller.getHtml();
-    this.container.html(htmlStr);
+    const data = controller.getData();
+    const categories = controller.getAllCategories(data);
+    categories.forEach( (category) => {
+      this.createCategoryContainer(category);
+    });
+    for(const item of data) {
+      const card = htmlTemplate.card(item);
+      const row = document.getElementById(item.category+'-row');
+      row.appendChild(card);
+    }
+  },
+  createCategoryContainer: function(category) {
+    const cont = document.createElement('div');
+    cont.setAttribute('class', 'container');
+    cont.setAttribute('id', category);
+    cont.innerHTML = `<h1>${category}</h1>`;
+    const row = this.createRow(category);
+    cont.appendChild(row);
+    this.container.appendChild(cont);
+  },
+  createRow: function(category) {
+    const row = document.createElement('div');
+    row.setAttribute('class', 'row');
+    row.setAttribute('id', category+'-row');
+
+    return row;
+  },
+};
+
+const modalView = {
+  init: function() {
+    this.modal = document.getElementById('myModal');
+    this.title = document.getElementById('modal-title');
+    this.img = document.getElementById('modal-img');
+    this.subtitle = document.getElementById('modal-subtitle');
+    this.text = document.getElementById('modal-text');
+  },
+  setData: function(item) {
+    this.title.textContent = item.title;
+    this.img.src = item.image;
+    this.subtitle.textContent = item.time + ' - ' + item.category;
+    this.text.textContent = item.details;
+    if(map.marker != null) {
+      map.clearMarker();
+    }
+    map.setMarker(item.coordinates);
+  },
+};
+const map = {
+  init: function() {
+    this.mapElem = document.getElementById('map');
+    this.options = {
+      center: {lat: 60.192059, lng: 24.945831},
+      zoom: 10,
+    };
+    this.map = new google.maps.Map(this.mapElem, this.options);
+  },
+  setMarker: function(coord) {
+    const coordinates = {lat: coord.lat, lng: coord.lng};
+    this.marker = new google.maps.Marker({
+      position: coordinates,
+    });
+    this.map.setCenter(coordinates);
+    this.marker.setMap(this.map);
+  },
+  clearMarker: function() {
+    this.marker.setMap(null);
+  },
+  getMap: function() {
+    return this.map;
   },
 };
 
 const controller = {
-  getHtml: function() {
-    const self = this;
-    let htmlStr = '<div class="row">';
-    let i = 0;
-    spyArray.forEach(function(item) {
-      i++;
-      htmlStr += self.createCard(item);
-      if(i == 3) {
-        htmlStr += '</div><div class="row">';
+  getData: function() {
+    return model.getData();
+  },
+  getAllCategories: function(arr) {
+    const categoriesList = [];
+    arr.forEach( (item) => {
+      if (!categoriesList.includes(item.category)) {
+        categoriesList.push(item.category);
       }
     });
-    htmlStr += '</div>';
-    return htmlStr;
-  },
-  getCardTemplate: function(item) {
-    let detailsThumb = item.details;
-    if(detailsThumb.length > 100) {
-      detailsThumb = detailsThumb.substring(0, 100) + '...';
-    }
-    const htmlTemplate =
-      `<div class="card">
-        <img class="card-img-top" src=${item.thumbnail} alt="picture">
-        <div class="card-block">
-          <h4 class="card-title">${item.title}</h4>
-          <h6 class="card-subtitle mb-2 text-muted">${item.time}</h6>
-          <h6 class="card-subtitle mb-2 text-muted">${item.category}</h6>
-          <p class="card-text">${detailsThumb}</p>
-        </div>
-        <div class="card-footer">
-          <button class="btn btn-primary">View</buttons>
-        </div>
-      </div>`;
 
-    return htmlTemplate;
+    return categoriesList;
+    //  return arr.sort((a, b) => a.category.localeCompare(b.category));
   },
   init: function() {
+    model.init('data.json');
+  },
+  modelReady: function() {
+    map.init();
+    modalView.init();
     view.init();
   },
 };
 
-controller.init();
+window.onload = controller.init();
+
 
